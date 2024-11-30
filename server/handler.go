@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -108,17 +107,19 @@ func Patch(ctx echo.Context) error {
 
 	reader, writer := io.Pipe()
 	go func(){
-		defer reader.Close()
-		if _, err := io.Copy(file, reader); err != nil {
-			log.Println(err.Error())
+		defer writer.Close()
+		written, err := io.Copy(writer, ctx.Request().Body)
+		if err != nil {
+			return 
 		}
+		fmt.Println("written", written)
 	}()
 
-	written, err := io.Copy(writer, ctx.Request().Body)
+	defer reader.Close()
+	written, err := io.Copy(file, reader)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
 	}
-	fmt.Println("written", written)
 
 	metadata.Offset += uint32(written)
 	metadataStore[uint32(fileId)] = metadata

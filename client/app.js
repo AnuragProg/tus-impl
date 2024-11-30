@@ -5,10 +5,12 @@ const fs = require('fs');
 const {head, post, patch, delete_} = require('./client');
 
 const readline = require('readline/promises');
-const { promises } = require('dns');
 
 const filename = process.argv[2];
 const partSize = +process.argv[3];
+
+console.log(`Filename: ${filename}`);
+console.log(`PartSize: ${partSize}`);
 
 async function main(){
    const rl = readline.createInterface({
@@ -52,15 +54,22 @@ async function main(){
             });
             console.log(`FileDescriptor: ${fd}`);
             const buffer = Buffer.alloc(partSize);
-            console.log(await new Promise((res, rej)=>{
-               fs.read(fd, buffer, 0, buffer.length, (offset==0)?0:offset+1, (err, bytesRead, buffer)=>{
+            const {bytesRead} = await new Promise((res, rej)=>{
+               console.log(`buffer length = ${buffer.length}`);
+               console.log(`offset = ${(offset==0)?0:offset+1}`);
+               fs.read(fd, buffer, 0, buffer.length, (offset==0)?0:offset+1, (err, bytesRead)=>{
                   if(err) rej(err);
-                  else res({bytesRead, buffer});
+                  else res({bytesRead});
+                  fs.close(fd);
                });
-            }));
-            fs.close(fd);
+            });
+            if (bytesRead === 0){ 
+               console.log('0 Bytes remaining in file');
+               console.log('Nothing to patch...');
+               continue;
+            }
 
-            response = await patch(id, offset, buffer);
+            response = await patch(id, offset, buffer.slice(0, bytesRead));
             if(response.status > 299){
                body = await response.json();
                console.error(`StatusCode: ${response.status}; body: ${JSON.stringify(body)}`);
