@@ -40,23 +40,27 @@ async function main(){
             console.log(`StatusCode: ${response.status}; file_id: ${id}`);
             continue;
          case 'patch':
-            if(Number.isNaN(offset)) continue;
-            const buffer = Buffer.alloc(partSize);
+            if(Number.isNaN(offset)) {
+               console.log(`Offset is nan: ${offset}`);
+               continue;
+            }
             const fd = await new Promise((res, rej)=>{
                fs.open(filename, 'r', (err, fd) => {
                   if(err) rej(err);
                   else res(fd);
                });
             });
-            await new Promise((res, rej)=>{
+            console.log(`FileDescriptor: ${fd}`);
+            const buffer = Buffer.alloc(partSize);
+            console.log(await new Promise((res, rej)=>{
                fs.read(fd, buffer, 0, buffer.length, (offset==0)?0:offset+1, (err, bytesRead, buffer)=>{
                   if(err) rej(err);
                   else res({bytesRead, buffer});
                });
-            });
+            }));
             fs.close(fd);
 
-            response = await patch(id, (offset==0)?0:offset+1, buffer);
+            response = await patch(id, offset, buffer);
             if(response.status > 299){
                body = await response.json();
                console.error(`StatusCode: ${response.status}; body: ${JSON.stringify(body)}`);

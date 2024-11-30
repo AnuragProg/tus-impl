@@ -96,10 +96,11 @@ func Patch(ctx echo.Context) error {
 	}
 
 	if requestUploadOffset != uint64(metadata.Offset) {
+		fmt.Println("Expected: ", metadata.Offset, " && Actual: ", requestUploadOffset)
 		return ctx.JSON(http.StatusConflict, echo.Map{"message": "offset doesn't match"})
 	}
 
-	file, err := os.OpenFile(metadata.Location, os.O_WRONLY|os.O_APPEND, 0644)
+	file, err := os.OpenFile(metadata.Location, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
 	}
@@ -117,11 +118,12 @@ func Patch(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
 	}
+	fmt.Println("written", written)
 
 	metadata.Offset += uint32(written)
 	metadataStore[uint32(fileId)] = metadata
 
-	ctx.Response().Header().Set("Upload-Offset", string(metadata.Offset))
+	ctx.Response().Header().Set("Upload-Offset", fmt.Sprintf("%d", metadata.Offset))
 	return ctx.NoContent(http.StatusNoContent)
 }
 
