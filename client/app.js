@@ -104,8 +104,9 @@ async function main(){
             }
             console.log(`StatusCode: ${response.status}`);
             continue;
-         case 'quit':
-            return;
+         case 'save':
+            continue;
+         case 'refresh':
          default:
             console.log('invalid command');
             continue;

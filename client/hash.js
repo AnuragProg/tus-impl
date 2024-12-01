@@ -53,7 +53,7 @@ function computeChecksum(algorithm, fd, start, length) {
    *
    * @param {HashAlgorithm} algorithm 
    * @param {string} filename 
-   * @param {number} partSize 
+   * @param {number} partSize Size of data(first, middle & last) over which checksum will be calculated
    * @returns {Promise<{first: ChecksumResult, middle: ChecksumResult, last:ChecksumResult}>}
    */
 function getPartialChecksum(algorithm, filename, partSize) {
