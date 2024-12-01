@@ -60,18 +60,19 @@ func Post(ctx echo.Context) error {
 
 	idCounter += 1
 
-	filename := parsedMetadata["filename"]
+	filename := filepath.Base(parsedMetadata["filename"])
 	fileExt := filepath.Ext(filename)
-	filenameHashed := base64.StdEncoding.EncodeToString([]byte(filename+fmt.Sprintf("%d", idCounter))) + fileExt // added id counter to uniquely save files
+	filenameHashed := base64.StdEncoding.EncodeToString([]byte(filename)) + fmt.Sprintf("%d", idCounter) + fileExt // added id counter to uniquely save files
 
-	file, err := os.Create(filename)
+	metadataStore[idCounter] = Metadata{0, filename, "./store/" + filenameHashed, uint32(filesize)}
+
+	file, err := os.Create(metadataStore[idCounter].Location)
 	if err != nil {
 		idCounter -= 1
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
 	}
 	file.Close()
 
-	metadataStore[idCounter] = Metadata{0, filename, "./store/" + filenameHashed, uint32(filesize)}
 
 	return ctx.JSON(http.StatusCreated, echo.Map{
 		"file_id": idCounter,
@@ -99,7 +100,7 @@ func Patch(ctx echo.Context) error {
 		return ctx.JSON(http.StatusConflict, echo.Map{"message": "offset doesn't match"})
 	}
 
-	file, err := os.OpenFile(metadata.Location, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	file, err := os.OpenFile(metadata.Location, os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
 	}
