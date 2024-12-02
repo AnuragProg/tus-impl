@@ -1,10 +1,12 @@
 // @ts-check
 
-const { assert } = require('console');
 const fs = require('fs');
 const {head, post, patch, delete_} = require('./client');
+const {setUploadStatus, getUploadStatus} = require('./util');
+
 
 const readline = require('readline/promises');
+const { getPartialChecksum, HashAlgorithm } = require('./hash');
 
 const filename = process.argv[2];
 const partSize = +process.argv[3];
@@ -28,7 +30,7 @@ async function main(){
    let body = null;
 
    while(true){
-      const input = await rl.question("command(post, patch, head, delete, quit): ");
+      const input = await rl.question("command(post, patch, head, delete, quit, save, refresh): ");
       
       switch(input){
          case 'post':
@@ -105,8 +107,30 @@ async function main(){
             console.log(`StatusCode: ${response.status}`);
             continue;
          case 'save':
+            if (!id) { console.log('file id not set yet'); }
+            const fileChecksum = await getPartialChecksum(HashAlgorithm.MD5, filename, 100);
+            setUploadStatus({
+               fileId: id,
+               filename: filename,
+               fileChecksum: fileChecksum,
+            });
             continue;
          case 'refresh':
+            const uploadStatus = getUploadStatus();
+            const currentFileChecksum = await getPartialChecksum(HashAlgorithm.MD5, filename, 100);
+            const expectedFileChecksum = uploadStatus.fileChecksum;
+
+            if (
+               currentFileChecksum.first.checksum != expectedFileChecksum.first.checksum ||
+               currentFileChecksum.middle.checksum != expectedFileChecksum.middle.checksum ||
+               currentFileChecksum.last.checksum != expectedFileChecksum.last.checksum
+            ){
+               console.error('file has changed since previous upload, hence need to start a new upload');
+            }else {
+               console.log('successfully set the file id to match server');
+               id = uploadStatus.fileId;
+            }
+            continue;
          default:
             console.log('invalid command');
             continue;
